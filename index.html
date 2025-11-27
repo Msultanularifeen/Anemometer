@@ -1,292 +1,247 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Anemometer Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/recharts.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.378.0/dist/lucide-react.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
   <style>
-    :root {
+    :root, .light {
       --background: 0 0% 100%;
       --foreground: 224 71.4% 4.1%;
       --card: 0 0% 100%;
       --card-foreground: 224 71.4% 4.1%;
-      --popover: 0 0% 100%;
-      --popover-foreground: 224 71.4% 4.1%;
       --primary: 220 9.1% 45.1%;
-      --primary-foreground: 210 20% 98%;
-      --secondary: 220 14.3% 95.9%;
-      --secondary-foreground: 220.9 39.3% 11%;
       --muted: 220 14.3% 95.9%;
       --muted-foreground: 220 8.9% 46.1%;
-      --accent: 220 14.3% 95.9%;
-      --accent-foreground: 220.9 39.3% 11%;
-      --destructive: 0 84.2% 60.2%;
-      --destructive-foreground: 210 20% 98%;
       --border: 220 13% 91%;
-      --input: 220 13% 91%;
-      --ring: 224 71.4% 4.1%;
       --chart-1: 220 70% 50%;
-      --chart-2: 25 80% 50%;
-      --radius: 0.5rem;
     }
     .dark {
       --background: 224 71.4% 4.1%;
       --foreground: 210 20% 98%;
       --card: 224 71.4% 4.1%;
       --card-foreground: 210 20% 98%;
-      --popover: 224 71.4% 4.1%;
-      --popover-foreground: 210 20% 98%;
       --primary: 210 20% 98%;
-      --primary-foreground: 220.9 39.3% 11%;
-      --secondary: 215 27.9% 16.9%;
-      --secondary-foreground: 210 20% 98%;
       --muted: 215 27.9% 16.9%;
       --muted-foreground: 217.9 10.6% 64.9%;
-      --accent: 215 27.9% 16.9%;
-      --accent-foreground: 210 20% 98%;
-      --destructive: 0 62.8% 30.6%;
-      --destructive-foreground: 210 20% 98%;
       --border: 215 27.9% 16.9%;
-      --input: 215 27.9% 16.9%;
-      --ring: 216 12.2% 83.9%;
       --chart-1: 220 70% 50%;
     }
     body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); }
-    .fade-in-animate { animation: fadeIn 0.5s ease-out forwards; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .bg-background { background-color: hsl(var(--background)); }
+    .bg-card { background-color: hsl(var(--card)); }
+    .text-card-foreground { color: hsl(var(--card-foreground)); }
+    .text-muted-foreground { color: hsl(var(--muted-foreground)); }
+    .border-b { border-bottom-width: 1px; }
+    .border-dashed { border-style: dashed; }
+    .border-primary { border-color: hsl(var(--primary)); }
+    .border-border { border-color: hsl(var(--border)); }
+    .recharts-xAxis .recharts-text { fill: hsl(var(--muted-foreground)); }
+    .recharts-yAxis .recharts-text { fill: hsl(var(--muted-foreground)); }
   </style>
 </head>
-<body class="font-sans antialiased">
-  <div id="app-root" class="flex min-h-screen w-full flex-col bg-background">
-    <!-- App structure will be rendered here by React -->
+<body class="bg-background font-sans antialiased">
+  <div id="app-container">
+    <div class="flex min-h-screen w-full flex-col bg-background">
+      <header class="flex h-16 items-center justify-between gap-4 border-b border-border bg-card px-6 sticky top-0 z-50">
+        <h1 class="text-xl font-semibold tracking-tight text-card-foreground">Anemometer</h1>
+        <button id="theme-toggle" class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700">
+          <svg id="theme-icon-light" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          <svg id="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5" style="display: none;"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d"m19.07 4.93-1.41 1.41"/></svg>
+        </button>
+      </header>
+      <main class="flex-1 p-4 sm:p-6 md:p-8">
+        <div id="error-alert" class="hidden items-center justify-center h-full">
+           <div class="max-w-xl mx-auto border-red-500/50 text-red-500 p-4 rounded-lg border">
+              <h2 class="font-medium leading-none tracking-tight">Connection Error</h2>
+              <div id="error-message" class="text-sm"></div>
+           </div>
+        </div>
+        <div id="dashboard-content" class="grid grid-cols-1 gap-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="border-dashed h-full transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1 rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+                <h3 class="text-sm font-medium text-muted-foreground">Current Speed</h3>
+                <div class="text-2xl font-bold tracking-tighter text-card-foreground" id="current-speed">0.00 <span class="text-sm font-medium text-muted-foreground">km/h</span></div>
+                <p class="text-xs text-muted-foreground">Latest reading from sensor</p>
+            </div>
+            <div class="border-dashed h-full transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1 rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+                <h3 class="text-sm font-medium text-muted-foreground">Average speed</h3>
+                <div class="text-2xl font-bold tracking-tighter text-card-foreground" id="average-speed">0.00 <span class="text-sm font-medium text-muted-foreground">km/h</span></div>
+                <p class="text-xs text-muted-foreground">Average of last 30 readings</p>
+            </div>
+            <div class="border-dashed h-full transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1 rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+                <h3 class="text-sm font-medium text-muted-foreground">Minimum Speed</h3>
+                <div class="text-2xl font-bold tracking-tighter text-card-foreground" id="min-speed">0.00 <span class="text-sm font-medium text-muted-foreground">km/h</span></div>
+                <p class="text-xs text-muted-foreground">Lowest reading</p>
+            </div>
+            <div class="border-dashed h-full transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1 rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+                <h3 class="text-sm font-medium text-muted-foreground">Maximum Speed</h3>
+                <div class="text-2xl font-bold tracking-tighter text-card-foreground" id="max-speed">0.00 <span class="text-sm font-medium text-muted-foreground">km/h</span></div>
+                <p class="text-xs text-muted-foreground">Highest reading</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 rounded-lg border border-dashed bg-card text-card-foreground shadow-sm p-4">
+              <h3 class="text-lg font-semibold text-card-foreground px-2">Real-time Wind Speed (Last 30 readings)</h3>
+              <div id="chart-container" class="w-full h-96"></div>
+            </div>
+            <div class="lg:col-span-1">
+                <div class="border-none shadow-none bg-transparent flex flex-col h-full rounded-lg bg-card text-card-foreground p-6">
+                    <h3 class="text-lg font-semibold">A Project by BS Physics Students</h3>
+                    <p class="text-sm text-muted-foreground">Batch 2024-2028</p>
+                    <div class="flex-1 flex flex-col justify-center gap-4 mt-4">
+                        <p><strong>Masoom Ali:</strong> Mechanical Work</p>
+                        <p><strong>Muhammad Sultan Ul Arifeen:</strong> Programming & Electronics</p>
+                        <p><strong>Website Designed & Developed By:</strong> Muhammad Sultan Ul Arifeen</p>
+                    </div>
+                </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-  <script type="text/javascript">
-    const e = React.createElement;
-    const { useState, useEffect, useMemo } = React;
-    const { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } = Recharts;
-
-    // --- START: Firebase Configuration ---
-    const firebaseConfig = {
-      apiKey: "AIzaSyAssOVvWLkzKMcL-kgyrlYNg05HEQUGBAo",
-      authDomain: "anemometer-fgsd.firebaseapp.com",
-      databaseURL: "https://anemometer-fgsd-default-rtdb.firebaseio.com",
-      projectId: "anemometer-fgsd",
-      storageBucket: "anemometer-fgsd.appspot.com",
-      messagingSenderId: "474068960064",
-      appId: "1:474068960064:web:b4dc79e5112a18743b30a5"
-    };
-    // --- END: Firebase Configuration ---
-
-    // Helper to create Lucide icons
-    const Icon = ({ name, className }) => e(lucide.icons[name], { className });
+  <script>
+    // --- START: THEME ---
+    const themeToggle = document.getElementById('theme-toggle');
+    const lightIcon = document.getElementById('theme-icon-light');
+    const darkIcon = document.getElementById('theme-icon-dark');
     
-    // Main App Component
-    function App() {
-      const [speedHistory, setSpeedHistory] = useState([]);
-      const [error, setError] = useState(null);
-      const [isDark, setIsDark] = useState(true);
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+        darkIcon.style.display = 'block';
+        lightIcon.style.display = 'none';
+    } else {
+        document.documentElement.classList.remove('dark');
+        darkIcon.style.display = 'none';
+        lightIcon.style.display = 'block';
+    }
 
-      useEffect(() => {
-        document.documentElement.classList.toggle('dark', isDark);
-      }, [isDark]);
-
-      useEffect(() => {
-        try {
-          if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-          }
-          const db = firebase.database();
-          const readingsRef = db.ref("readings");
-
-          const listener = readingsRef.on(
-            "value",
-            (snapshot) => {
-              const data = snapshot.val();
-              if (data) {
-                const newHistory = Object.values(data)
-                  .map(d => ({
-                    speed: typeof d.speed === "number" ? d.speed : 0,
-                    timestamp: typeof d.timestamp === "number" ? d.timestamp : Date.now(),
-                    time: new Date(d.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  }))
-                  .filter(d => d.timestamp > 0)
-                  .sort((a, b) => a.timestamp - b.timestamp)
-                  .slice(-30);
-                setSpeedHistory(newHistory);
-                setError(null);
-              } else {
-                 setSpeedHistory([]);
-              }
-            },
-            (err) => {
-              console.error("Firebase read failed:", err);
-              setError("Failed to connect to the data stream. Please check your Firebase setup and security rules.");
-            }
-          );
-
-          return () => db.ref("readings").off("value", listener);
-
-        } catch (e) {
-          console.error("Firebase initialization failed:", e);
-           if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("YOUR_")) {
-             setError("Connection Error: Make sure you have replaced the placeholder API keys in the HTML file.");
-           } else {
-             setError("Failed to initialize Firebase. Please check your configuration.");
-           }
+    themeToggle.addEventListener('click', () => {
+        if (document.documentElement.classList.contains('dark')) {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+            darkIcon.style.display = 'none';
+            lightIcon.style.display = 'block';
+        } else {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+            darkIcon.style.display = 'block';
+            lightIcon.style.display = 'none';
         }
-      }, []);
+    });
+    // --- END: THEME ---
+    
+    
+    // --- START: FIREBASE & CHART LOGIC ---
+    let app;
+    try {
+        // --- START: Firebase Configuration ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyAssOVvWLkzKMcL-kgyrlYNg05HEQUGBAo",
+          authDomain: "anemometer-fgsd.firebaseapp.com",
+          projectId: "anemometer-fgsd",
+          appId: "1:474068960064:web:b4dc79e5112a18743b30a5",
+          databaseURL: "https://anemometer-fgsd-default-rtdb.firebaseio.com",
+          storageBucket: "anemometer-fgsd.appspot.com",
+          messagingSenderId: "474068960064",
+        };
+        // --- END: Firebase Configuration ---
 
-      const { currentSpeed, averageSpeed, minSpeed, maxSpeed } = useMemo(() => {
-        if (speedHistory.length === 0) return { currentSpeed: 0, averageSpeed: 0, minSpeed: 0, maxSpeed: 0 };
-        const speeds = speedHistory.map(s => s.speed);
-        const validSpeeds = speeds.filter(s => s > 0);
-        const current = speeds[speeds.length - 1] || 0;
-        const avg = validSpeeds.length > 0 ? validSpeeds.reduce((a, c) => a + c, 0) / validSpeeds.length : 0;
-        const min = validSpeeds.length > 0 ? Math.min(...validSpeeds) : 0;
-        const max = validSpeeds.length > 0 ? Math.max(...validSpeeds) : 0;
-        return { currentSpeed: current, averageSpeed: avg, minSpeed: min, maxSpeed: max };
-      }, [speedHistory]);
-      
-      const themeColor = isDark ? '#FFFFFF' : '#666666';
+        if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("YOUR_")) {
+             throw new Error("Make sure you have replaced the placeholder API keys in the HTML file.");
+        }
 
-      return e('div', { className: 'flex min-h-screen w-full flex-col bg-[hsl(var(--background))]' },
-        e('header', { className: 'flex h-16 items-center justify-between gap-4 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-6 sticky top-0 z-50' },
-          e('h1', { className: 'text-xl font-semibold tracking-tight text-[hsl(var(--card-foreground))]' }, 'Anemometer'),
-          e('button', {
-            onClick: () => setIsDark(!isDark),
-            className: 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-transparent hover:bg-accent hover:text-accent-foreground h-10 w-10'
-          },
-            isDark ? e(Icon, { name: 'Sun', className: 'h-[1.2rem] w-[1.2rem]' }) : e(Icon, { name: 'Moon', className: 'h-[1.2rem] w-[1.2rem]' })
-          )
-        ),
-        e('main', { className: 'flex-1 p-4 sm:p-6 md:p-8' },
-          error ?
-            e('div', { className: 'flex items-center justify-center h-[calc(100vh-12rem)] p-4' },
-              e('div', { className: 'relative w-full max-w-xl mx-auto rounded-lg border border-destructive/50 text-destructive p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-destructive' },
-                e(Icon, { name: 'AlertTriangle', className: 'h-4 w-4' }),
-                e('h5', { className: 'mb-1 font-medium leading-none tracking-tight' }, 'Connection Error'),
-                e('div', { className: 'text-sm [&_p]:leading-relaxed' }, error)
-              )
-            ) :
-            e('div', { className: 'grid grid-cols-1 gap-6' },
-              e('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6' },
-                e(SpeedDisplay, { title: 'Current Speed', speed: currentSpeed, iconName: 'Zap', delay: 100 }),
-                e(AverageSpeed, { average: averageSpeed, delay: 200 }),
-                e(SpeedDisplay, { title: 'Minimum Speed', speed: minSpeed, iconName: 'Zap', delay: 300 }),
-                e(SpeedDisplay, { title: 'Maximum Speed', speed: maxSpeed, iconName: 'Activity', useSecondaryColor: true, delay: 400 })
-              ),
-              e('div', { className: 'grid grid-cols-1 lg:grid-cols-3 gap-6' },
-                e(SpeedChart, { data: speedHistory, title: "Real-time Wind Speed (Last 30 readings)", delay: 500, textColor: themeColor }),
-                e(ProjectCreditsCard, { delay: 600 })
-              )
-            )
-        )
-      );
+        app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const readingsRef = db.ref("readings");
+
+        const { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
+        let chart;
+
+        readingsRef.on("value", (snapshot) => {
+            const data = snapshot.val();
+            let history = [];
+            if (data) {
+                history = Object.values(data)
+                    .map(d => ({
+                        speed: typeof d.speed === 'number' ? d.speed : 0,
+                        timestamp: typeof d.timestamp === 'number' ? d.timestamp : Date.now(),
+                    }))
+                    .sort((a, b) => a.timestamp - b.timestamp)
+                    .slice(-30);
+            }
+
+            if (history.length < 30) {
+                const placeholders = Array.from({ length: 30 - history.length }, (_, i) => ({
+                    speed: 0,
+                    timestamp: (history[0]?.timestamp || Date.now()) - (30 - history.length - i) * 1000,
+                }));
+                history = [...placeholders, ...history];
+            }
+             
+            const chartData = history.map(d => ({
+                ...d,
+                time: new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            }));
+
+            const speeds = history.map(s => s.speed).filter(s => s > 0);
+            const currentSpeed = history.length > 0 ? history[history.length - 1].speed : 0;
+            const avgSpeed = speeds.length > 0 ? speeds.reduce((a, b) => a + b, 0) / speeds.length : 0;
+            const minSpeed = speeds.length > 0 ? Math.min(...speeds) : 0;
+            const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 0;
+
+            document.getElementById('current-speed').innerHTML = `${currentSpeed.toFixed(2)} <span class="text-sm font-medium text-muted-foreground">km/h</span>`;
+            document.getElementById('average-speed').innerHTML = `${avgSpeed.toFixed(2)} <span class="text-sm font-medium text-muted-foreground">km/h</span>`;
+            document.getElementById('min-speed').innerHTML = `${minSpeed.toFixed(2)} <span class="text-sm font-medium text-muted-foreground">km/h</span>`;
+            document.getElementById('max-speed').innerHTML = `${maxSpeed.toFixed(2)} <span class="text-sm font-medium text-muted-foreground">km/h</span>`;
+
+            const yDomain = [0, Math.max(10, maxSpeed + 5)];
+            const chartEl = React.createElement(ResponsiveContainer, { width: '100%', height: '100%' },
+                React.createElement(AreaChart, { data: chartData, margin: { top: 5, right: 30, left: 0, bottom: 5 } },
+                    React.createElement(defs, null, 
+                      React.createElement('linearGradient', { id: 'colorUv', x1: '0', y1: '0', x2: '0', y2: '1' },
+                        React.createElement('stop', { offset: '5%', stopColor: 'hsl(var(--chart-1))', stopOpacity: 0.8 }),
+                        React.createElement('stop', { offset: '95%', stopColor: 'hsl(var(--chart-1))', stopOpacity: 0 })
+                      )
+                    ),
+                    React.createElement(XAxis, { dataKey: 'time', stroke: 'hsl(var(--muted-foreground))', fontSize: 12 }),
+                    React.createElement(YAxis, { domain: yDomain, stroke: 'hsl(var(--muted-foreground))', fontSize: 12 }),
+                    React.createElement(Tooltip, { 
+                        contentStyle: { 
+                            backgroundColor: 'hsl(var(--background))',
+                            borderColor: 'hsl(var(--border))'
+                        } 
+                    }),
+                    React.createElement(Area, { type: 'monotone', dataKey: 'speed', stroke: 'hsl(var(--chart-1))', fillOpacity: 1, fill: 'url(#colorUv)' })
+                )
+            );
+            ReactDOM.render(chartEl, document.getElementById('chart-container'));
+            document.getElementById('dashboard-content').style.display = 'grid';
+            document.getElementById('error-alert').style.display = 'none';
+
+        }, (error) => {
+            console.error(error);
+            showError(error.message);
+        });
+
+    } catch (e) {
+        console.error(e);
+        showError(e.message);
     }
     
-    // Child Components
-    const SpeedDisplay = ({ title, speed, iconName, useSecondaryColor, delay }) => e('div', { className: 'fade-in-animate', style: { animationDelay: `${delay}ms` } },
-      e(Card, { },
-        e(CardHeader, { title: title, icon: e(Icon, { name: iconName, className: 'h-4 w-4 text-muted-foreground' }) }),
-        e(CardContent, { },
-          e('div', { className: 'text-2xl font-bold tracking-tighter' }, `${speed.toFixed(2)} `, e('span', { className: 'text-sm font-medium text-[hsl(var(--muted-foreground))]' }, 'km/h')),
-          e('p', { className: 'text-xs text-[hsl(var(--muted-foreground))]' }, title === "Current Speed" ? "Latest reading from sensor" : (title === "Maximum Speed" ? "Highest reading" : "Lowest reading"))
-        )
-      )
-    );
-
-    const AverageSpeed = ({ average, delay }) => e('div', { className: 'fade-in-animate', style: { animationDelay: `${delay}ms` } },
-      e(Card, {},
-        e(CardHeader, { title: 'Average speed', icon: e(Icon, { name: 'BarChart', className: 'h-4 w-4 text-muted-foreground' }) }),
-        e(CardContent, {},
-          e('div', { className: 'text-2xl font-bold tracking-tighter' }, `${average.toFixed(2)} `, e('span', { className: 'text-sm font-medium text-[hsl(var(--muted-foreground))]' }, 'km/h')),
-          e('p', { className: 'text-xs text-[hsl(var(--muted-foreground))]' }, 'Average of last 30 readings')
-        )
-      )
-    );
-    
-    const SpeedChart = ({ data, title, delay, textColor }) => {
-        const yDomain = [0, Math.max(10, Math.max(...data.map(d => d.speed)) + 5)];
-        return e('div', { className: 'lg:col-span-2 fade-in-animate', style: { animationDelay: `${delay}ms` } },
-          e(Card, { className: 'h-full flex flex-col' },
-            e('div', { className: 'flex flex-col space-y-1.5 p-6' }, e('h3', { className: 'text-lg font-semibold leading-none tracking-tight' }, title)),
-            e('div', { className: 'p-6 pt-0 flex-1 -mt-4' },
-              e(ResponsiveContainer, { width: '100%', height: 350 },
-                e(AreaChart, { data: data, margin: { top: 5, right: 20, left: -10, bottom: 20 } },
-                  e('defs', null, 
-                    e('linearGradient', { id: 'colorSpeed', x1: '0', y1: '0', x2: '0', y2: '1' },
-                      e('stop', { offset: '5%', stopColor: 'hsl(var(--chart-1))', stopOpacity: 0.4 }),
-                      e('stop', { offset: '95%', stopColor: 'hsl(var(--chart-1))', stopOpacity: 0 })
-                    )
-                  ),
-                  e(XAxis, { dataKey: 'time', stroke: textColor, fontSize: 12, tickLine: false, axisLine: { stroke: 'hsl(var(--foreground))', opacity: 0.2 }, tickMargin: 10 }),
-                  e(YAxis, { stroke: textColor, fontSize: 12, tickLine: false, axisLine: { stroke: 'hsl(var(--foreground))', opacity: 0.2 }, tickMargin: 10, domain: yDomain }),
-                  e(Tooltip, { 
-                      contentStyle: { 
-                          backgroundColor: 'hsl(var(--background) / 0.8)', 
-                          borderColor: 'hsl(var(--border))',
-                          color: 'hsl(var(--foreground))'
-                      },
-                      cursor: { stroke: "hsl(var(--chart-1))", strokeWidth: 1 }
-                  }),
-                  e(Area, { type: 'monotone', dataKey: 'speed', stroke: 'hsl(var(--chart-1))', fill: 'url(#colorSpeed)', strokeWidth: 2 })
-                )
-              )
-            )
-          )
-        );
-    };
-
-    const ProjectCreditsCard = ({ delay }) => e('div', { className: 'lg:col-span-1 fade-in-animate', style: { animationDelay: `${delay}ms` } },
-        e(Card, { className: 'border-none shadow-none bg-transparent flex flex-col h-full'},
-            e('div', {className: 'p-6'}, 
-                e('div', {className: 'flex items-center gap-3 mb-2'}, e(Icon, {name: 'Users', className: 'h-6 w-6 text-primary'}), e('h3', {className: 'text-lg font-semibold'}, 'A Project by BS Physics Students')),
-                e('p', {className: 'text-sm text-[hsl(var(--muted-foreground))]'}, 'Batch 2024-2028')
-            ),
-            e('div', {className: 'p-6 pt-0 flex-1 flex flex-col justify-between'}, 
-                e('div', {className: 'flex flex-col gap-3'},
-                    e(CreditItem, {iconName: 'Briefcase', name: 'Masoom Ali', role: 'Mechanical Work'}),
-                    e(CreditItem, {iconName: 'Code', name: 'Muhammad Sultan Ul Arifeen', role: 'Programming & Electronics'}),
-                    e(CreditItem, {iconName: 'Shield', name: 'Website Designed & Developed By', role: 'Muhammad Sultan Ul Arifeen'})
-                ),
-                e('div', {className: 'mt-4'},
-                    e('hr', {className: 'shrink-0 bg-border h-[1px] w-full my-3'}),
-                    e('div', {className: 'flex items-center gap-3 mb-2'}, e(Icon, {name: 'Award', className: 'h-5 w-5 text-amber-500'}), e('p', {className: 'text-sm font-semibold'}, 'Special Thanks')),
-                    e('div', {className: 'text-xs text-[hsl(var(--muted-foreground))] space-y-1'},
-                        e('p', null, 'Principal Azhar Kaisar'),
-                        e('p', null, 'Professor Muhammad Farooq Ibadat')
-                    )
-                )
-            )
-        )
-    );
-    
-    const CreditItem = ({ iconName, name, role }) => e('div', {className: 'flex items-start gap-3'},
-        e('div', {className: 'bg-primary/10 p-2 rounded-full'}, e(Icon, {name: iconName, className: 'h-4 w-4 text-primary'})),
-        e('div', null, 
-            e('p', {className: 'text-sm font-semibold'}, name),
-            e('p', {className: 'text-xs text-[hsl(var(--muted-foreground))]'}, role)
-        )
-    );
-
-    // Generic UI Components
-    const Card = ({ children, className }) => e('div', { className: `rounded-lg border bg-[hsl(var(--card))] text-[hsl(var(--card-foreground))] shadow-sm border-dashed h-full transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1 ${className || ''}` }, children);
-    const CardHeader = ({ title, icon }) => e('div', { className: 'flex flex-row items-center justify-between space-y-0 p-6 pb-2' },
-      e('h3', { className: 'text-sm font-medium text-[hsl(var(--muted-foreground))]' }, title),
-      icon
-    );
-    const CardContent = ({ children }) => e('div', { className: 'p-6 pt-0' }, children);
-
-    ReactDOM.render(e(App), document.getElementById('app-root'));
+    function showError(message) {
+        document.getElementById('dashboard-content').style.display = 'none';
+        document.getElementById('error-alert').style.display = 'flex';
+        document.getElementById('error-message').textContent = message;
+    }
+    // --- END: FIREBASE & CHART LOGIC ---
   </script>
 </body>
 </html>
