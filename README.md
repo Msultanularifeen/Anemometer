@@ -1,135 +1,397 @@
-# Anemometer
+--- README.md ---
+# ESP32 Anemometer Project
 
-A simple anemometer (wind speed sensor) project using an Arduino-compatible board and a Hall-effect sensor (internal or external). The measured wind speed is converted to a servo angle (0–180°), allowing a visual indicator (or other mechanical response) driven by a servo motor.
+Files included:
+- `main.ino` — ESP32 Arduino sketch (reads IR pulses, calculates speed, shows on ILI9486 TFT, uploads to Firebase Realtime DB, and has WiFi AP fallback portal).
+- `index.html` — Modern web UI that reads Firebase Realtime Database and shows current speed, average speed, and a live chart (uses Chart.js).
+- `style.css` — Simple styling for the web UI.
 
-## Features
+## Quick setup
+1. Install Arduino libraries: TFT_eSPI, HTTPClient, ArduinoJson (optional), WiFi, Preferences.
+2. Configure `TFT_eSPI` library for your ILI9486 (edit `User_Setup.h` in TFT_eSPI examples). If you prefer Adafruit drivers, adapt code accordingly.
+3. Edit constants at top of `main.ino` (wheel diameter, pulsesPerRevolution, FIREBASE_HOST, FIREBASE_AUTH if needed).
+4. Upload `index.html` + `style.css` to any static host (GitHub Pages, Firebase Hosting, or your own webserver). The web UI reads directly from your Firebase Realtime DB via REST.
 
-- Supports internal or external Hall-effect sensor
-- Calculates wind speed from rotation count
-- Maps wind speed to servo angle (0–180°)
-- Serial output for debugging and monitoring
+--- main.ino ---
+/*
+  ESP32 Anemometer
+  - Counts pulses from an IR sensor using interrupt
+  - Calculates current speed (m/s and km/h) and average over a sliding window
+  - Shows data on ILI9486 3.5" TFT using TFT_eSPI
+  - Uploads readings to Firebase Realtime Database via REST API
+  - If WiFi not available, starts SoftAP + simple portal to enter SSID/password
 
-## Hardware Required
+  Wiring (example):
+   - IR sensor digital out -> GPIO 13 (IR_PIN)
+   - GND -> GND, VCC -> 3.3V or 5V per your sensor
+   - TFT: configure via TFT_eSPI User_Setup.h for ILI9486 (pins depend on shield/module)
+*/
 
-- Arduino-compatible board (e.g., ESP32, Arduino Uno — note: `hallRead()` used in code is an ESP32 built-in function; change if using other boards)
-- Hall-effect sensor (or use an internal Hall sensor on compatible boards)
-- Servo motor
-- Jumper wires
-- Power supply appropriate for the servo and board
-- Optional: anemometer rotor with magnet(s)
+#include <WiFi.h>
+#include <WebServer.h>
+#include <Preferences.h>
+#include <TFT_eSPI.h>
+#include <HTTPClient.h>
 
-## Wiring
+// ======= CONFIG =======
+#define IR_PIN 13                // interrupt pin for IR pulse
+#define PULSES_PER_REV 1         // number of IR pulses per full rotation (set 1 if one pulse per rev)
+const float WHEEL_DIAMETER_M = 0.10; // meters (set your anemometer cup wheel diameter)
+const char* FIREBASE_HOST = "wind-speed-a5223-default-rtdb.firebaseio.com"; // user provided
+const char* FIREBASE_AUTH = "zzB9UhxmW3lt6YXzAgPQQvHfT4d3s55UCLRBpFpG";      // user provided
 
-- Servo signal pin → SERVO_PIN (default in code: 3)
-- External Hall sensor output → EXTERNAL_HALL_PIN (default in code: 4) if `USE_INTERNAL_HALL` is set to `false`
-- Ground the sensors and servo to the Arduino ground
-- Power servo with a stable 5V (or as required by your servo); do not power a high-current servo directly from the Arduino 3.3V/5V pin if it draws more current than the board can supply
+// WiFi and portal
+Preferences prefs;
+WebServer server(80);
+TFT_eSPI tft = TFT_eSPI();
 
-## Configuration
+// ======= GLOBALS =======
+volatile unsigned long pulseCount = 0; // incremented in ISR
+unsigned long lastSampleMillis = 0;
+const unsigned long SAMPLE_INTERVAL_MS = 2000; // compute every 2s
 
-Open the sketch and adjust these defines at the top to match your setup:
+// For averaging over N samples
+const int AVERAGE_WINDOW = 10;
+float speedWindow[AVERAGE_WINDOW];
+int speedWindowIdx = 0;
+int speedWindowCount = 0;
 
-- `USE_INTERNAL_HALL`: `true` to use the board's internal Hall sensor (ESP32), `false` to use an external Hall sensor connected to `EXTERNAL_HALL_PIN`.
-- `EXTERNAL_HALL_PIN`: Pin number for an external Hall sensor (used only when `USE_INTERNAL_HALL` is `false`).
-- `SERVO_PIN`: Pin connected to the servo signal.
-- Radius used in wind speed calculation is currently set to 0.05 m (5 cm). Adjust if your rotor radius differs.
+// WiFi credentials saved in Preferences keys: ssid / pass
 
-Notes:
-- The code expects pulses (rotations) from a Hall sensor; if using an external sensor, the code attaches an interrupt on a falling edge to count rotations.
-- For ESP32 internal hall, the code uses `hallRead()` and uses a simple threshold-based pulse simulation. If you want more accurate pulse detection with internal sensors, consider implementing a more robust filtering approach.
+// ======= INTERRUPT =======
+void IR_ISR() {
+  pulseCount++;
+}
 
-## Usage
+// ======= HELPERS =======
+String urlEncode(const String &str) {
+  String encoded = "";
+  char c;
+  for (size_t i = 0; i < str.length(); i++) {
+    c = str.charAt(i);
+    if (('0' <= c && c <= '9') || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '-' || c == '_' || c == '.' || c == '~') {
+      encoded += c;
+    } else {
+      encoded += '%';
+      char buf[3];
+      sprintf(buf, "%02X", (uint8_t)c);
+      encoded += buf;
+    }
+  }
+  return encoded;
+}
 
-- Load the sketch onto your Arduino/ESP32.
-- Open the serial monitor (115200 bps) to see hall values (if using internal sensor) and calculated wind speed in m/s.
-- The servo angle will update every 2 seconds based on the measured wind speed (mapped from 0–20 m/s to 0–180°).
+// Calculate speed (m/s) from pulses counted in interval_ms
+float calculateSpeed(unsigned long pulses, unsigned long interval_ms) {
+  if (interval_ms == 0) return 0.0;
+  float rotations = (float)pulses / (float)PULSES_PER_REV;
+  float circumference = 3.14159265 * WHEEL_DIAMETER_M; // meters
+  float meters = rotations * circumference;
+  float seconds = interval_ms / 1000.0;
+  float mps = meters / seconds;
+  return mps; // meters per second
+}
 
-## Troubleshooting
+void pushReadingToFirebase(float current_mps, float average_mps) {
+  if (WiFi.status() != WL_CONNECTED) return;
+  HTTPClient http;
+  String host = String("https://") + FIREBASE_HOST;
+  unsigned long ts = millis();
+  // push to /readings as a new object (POST)
+  String postUrl = host + "/readings.json?auth=" + FIREBASE_AUTH;
+  String payload = "{";
+  payload += String("\"timestamp\":") + String(ts) + ",";
+  payload += String("\"current_mps\":") + String(current_mps, 3) + ",";
+  payload += String("\"average_mps\":") + String(average_mps, 3);
+  payload += "}";
 
-- If wind speed always reads 0:
-  - Verify the Hall sensor wiring.
-  - Check that the magnet on the rotor passes the sensor properly.
-  - If using the internal Hall sensor, ensure your board actually has one (ESP32 has it).
-- If the servo jitters or behaves unpredictably:
-  - Use a separate power supply for the servo with a common ground.
-  - Add smoothing or a low-pass filter to the measured value before writing to the servo.
-- Debounce and noise can cause false counts; adjust thresholds or add hardware filtering if needed.
+  http.begin(postUrl);
+  http.addHeader("Content-Type", "application/json");
+  int httpCode = http.POST(payload);
+  // simple debug prints
+  // Serial.println("POST " + postUrl + " => " + String(httpCode));
+  http.end();
 
-## License
+  // also update /current and /average (PUT)
+  String putUrlCur = host + "/current.json?auth=" + FIREBASE_AUTH;
+  String putUrlAvg = host + "/average.json?auth=" + FIREBASE_AUTH;
 
-Include whichever license you prefer for your project (e.g., MIT). This README contains descriptive text only — choose and add a LICENSE file if you want to include an open-source license.
+  http.begin(putUrlCur);
+  http.addHeader("Content-Type", "application/json");
+  http.PUT(String(current_mps,3));
+  http.end();
 
-## Arduino Sketch
+  http.begin(putUrlAvg);
+  http.addHeader("Content-Type", "application/json");
+  http.PUT(String(average_mps,3));
+  http.end();
+}
 
-The full sketch is included below. Copy and paste it into your Arduino IDE (select the correct board and COM port), adjust the configuration at the top if necessary, and upload.
+// ======= WiFi portal =======
+String portalPage = R"rawliteral(
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>WiFi Setup</title>
+  </head>
+  <body>
+    <h2>ESP32 WiFi Setup</h2>
+    <form method="POST" action="/save">
+      SSID:<br><input name="ssid" maxlength="32"><br>
+      Password:<br><input name="pass" maxlength="64"><br>
+      <br><input type="submit" value="Save">
+    </form>
+  </body>
+</html>
+)rawliteral";
 
-```cpp
-#include <Servo.h>
+void handleRoot() {
+  server.send(200, "text/html", portalPage);
+}
 
-// ========================== CONFIG ==========================
-#define USE_INTERNAL_HALL true     // Change to false if using external sensor
-#define EXTERNAL_HALL_PIN 4        // External hall pin (if used)
-#define SERVO_PIN 3                // Servo pin
-
-Servo servo;
-volatile unsigned int rotationCount = 0;
-unsigned long lastTime = 0;
-float windSpeed = 0.0;
-
-// ========================== SETUP ==========================
-void setup() {
-  Serial.begin(115200);
-  servo.attach(SERVO_PIN);
-
-  if (!USE_INTERNAL_HALL) {
-    pinMode(EXTERNAL_HALL_PIN, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(EXTERNAL_HALL_PIN), countRotation, FALLING);
-    Serial.println("Using external Hall sensor...");
+void handleSave() {
+  if (server.method() != HTTP_POST) {
+    server.send(405, "text/plain", "Method Not Allowed");
+    return;
+  }
+  String ssid = server.arg("ssid");
+  String pass = server.arg("pass");
+  if (ssid.length() > 0) {
+    prefs.putString("ssid", ssid);
+    prefs.putString("pass", pass);
+    String resp = "Saved. Rebooting...";
+    server.send(200, "text/plain", resp);
+    delay(500);
+    ESP.restart();
   } else {
-    Serial.println("Using internal Hall sensor...");
+    server.send(400, "text/plain", "SSID required");
   }
 }
 
-// ========================== MAIN LOOP ==========================
-void loop() {
-  unsigned long currentTime = millis();
+void startPortal() {
+  WiFi.mode(WIFI_AP);
+  String apName = "Anemometer-Setup-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+  WiFi.softAP(apName.c_str());
+  server.on("/", handleRoot);
+  server.on("/save", HTTP_POST, handleSave);
+  server.begin();
+}
 
-  if (USE_INTERNAL_HALL) {
-    int hallValue = hallRead();  // Internal hall sensor value
-    Serial.print("Hall Value: ");
-    Serial.println(hallValue);
+// ======= TFT helpers =======
+void tftInit() {
+  tft.init();
+  tft.setRotation(1);
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setTextFont(2);
+}
 
-    // Simulated pulse counting based on threshold
-    if (hallValue > 20 || hallValue < -20) {
-      rotationCount++;
-      delay(50); // debounce
+void tftShowReading(float current_mps, float avg_mps) {
+  tft.fillRect(0,0, tft.width(), 40, TFT_NAVY); // header area (user color)
+  tft.setCursor(6,6);
+  tft.setTextSize(2);
+  tft.setTextColor(TFT_WHITE, TFT_NAVY);
+  tft.print("Anemometer");
+
+  tft.setCursor(6, 50);
+  tft.setTextSize(2);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  float current_kmh = current_mps * 3.6;
+  float avg_kmh = avg_mps * 3.6;
+  tft.printf("Curr: %.2f km/h\n", current_kmh);
+  tft.printf("Avg:  %.2f km/h\n", avg_kmh);
+}
+
+// ======= setup & loop =======
+void setup() {
+  Serial.begin(115200);
+  delay(50);
+  prefs.begin("anemometer", false);
+
+  // attach interrupt
+  pinMode(IR_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(IR_PIN), IR_ISR, FALLING);
+
+  tftInit();
+  tft.println("Booting...");
+
+  // Try to connect to stored WiFi
+  String ssid = prefs.getString("ssid", "");
+  String pass = prefs.getString("pass", "");
+  if (ssid.length() > 0) {
+    tft.println("Connecting to WiFi...");
+    WiFi.begin(ssid.c_str(), pass.c_str());
+    unsigned long start = millis();
+    while (millis() - start < 10000) {
+      if (WiFi.status() == WL_CONNECTED) break;
+      delay(200);
     }
   }
 
-  // Calculate every 2 seconds
-  if (currentTime - lastTime >= 2000) {
-    float timeInSeconds = (currentTime - lastTime) / 1000.0;
-    float rotationsPerSec = rotationCount / timeInSeconds;
+  if (WiFi.status() != WL_CONNECTED) {
+    // start portal
+    tft.println("Starting WiFi portal...\nConnect to AP to configure WiFi");
+    startPortal();
+  } else {
+    tft.println("WiFi connected");
+    tft.printf("IP: %s\n", WiFi.localIP().toString().c_str());
+  }
 
-    // radius = 0.05 m (modify as needed)
-    windSpeed = 2 * 3.1416 * 0.05 * rotationsPerSec;
+  lastSampleMillis = millis();
+}
 
-    // Reset counters
-    rotationCount = 0;
-    lastTime = currentTime;
+void loop() {
+  // handle portal if running
+  if (WiFi.getMode() == WIFI_AP) {
+    server.handleClient();
+  }
 
-    // Map wind speed (0–20 m/s) → Servo (0–180°)
-    int angle = map(constrain(windSpeed, 0, 20), 0, 20, 0, 180);
-    servo.write(angle);
+  unsigned long now = millis();
+  if (now - lastSampleMillis >= SAMPLE_INTERVAL_MS) {
+    // take snapshot of pulses atomically
+    noInterrupts();
+    unsigned long pulses = pulseCount;
+    pulseCount = 0;
+    interrupts();
 
-    Serial.print("Wind Speed: ");
-    Serial.print(windSpeed);
-    Serial.println(" m/s");
+    float current_mps = calculateSpeed(pulses, now - lastSampleMillis);
+
+    // update sliding window
+    speedWindow[speedWindowIdx] = current_mps;
+    speedWindowIdx = (speedWindowIdx + 1) % AVERAGE_WINDOW;
+    if (speedWindowCount < AVERAGE_WINDOW) speedWindowCount++;
+    float sum = 0;
+    for (int i = 0; i < speedWindowCount; i++) sum += speedWindow[i];
+    float avg_mps = speedWindowCount ? sum / speedWindowCount : 0;
+
+    // display
+    tft.showImage(0,0); // optional placeholder if using images; safe to ignore if not used
+    tftShowReading(current_mps, avg_mps);
+
+    // upload
+    if (WiFi.status() == WL_CONNECTED) {
+      pushReadingToFirebase(current_mps, avg_mps);
+    }
+
+    lastSampleMillis = now;
   }
 }
 
-// ========================== ISR ==========================
-void countRotation() {
-  rotationCount++;
-}
-```
+--- index.html ---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Anemometer Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Anemometer Dashboard</h1>
+    <p id="status">Connecting...</p>
+  </header>
+  <main>
+    <section class="cards">
+      <div class="card">
+        <h2>Current</h2>
+        <p id="current">-- km/h</p>
+      </div>
+      <div class="card">
+        <h2>Average</h2>
+        <p id="average">-- km/h</p>
+      </div>
+    </section>
+    <section>
+      <canvas id="speedChart" height="120"></canvas>
+    </section>
+  </main>
+
+  <script>
+    const FIREBASE_HOST = 'https://wind-speed-a5223-default-rtdb.firebaseio.com';
+    const FIREBASE_AUTH = 'zzB9UhxmW3lt6YXzAgPQQvHfT4d3s55UCLRBpFpG';
+
+    const currentEl = document.getElementById('current');
+    const avgEl = document.getElementById('average');
+    const statusEl = document.getElementById('status');
+
+    const ctx = document.getElementById('speedChart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Speed (km/h)',
+          data: [],
+          tension: 0.3,
+          fill: false,
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        scales: {
+          x: { display: true },
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
+    // helper to fetch JSON from RTDB
+    async function fetchJSON(path) {
+      const url = `${FIREBASE_HOST}${path}.json?auth=${FIREBASE_AUTH}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Network error');
+      return res.json();
+    }
+
+    async function updateOnce() {
+      try {
+        statusEl.textContent = 'Loading...';
+        const cur = await fetchJSON('/current');
+        const avg = await fetchJSON('/average');
+        if (cur !== null) currentEl.textContent = (cur * 3.6).toFixed(2) + ' km/h';
+        if (avg !== null) avgEl.textContent = (avg * 3.6).toFixed(2) + ' km/h';
+
+        // fetch last ~50 readings
+        const readings = await fetchJSON('/readings?orderBy="timestamp"');
+        // readings is an object of pushed items
+        const list = [];
+        for (const k in readings) {
+          if (readings[k] && readings[k].timestamp && readings[k].current_mps !== undefined) {
+            list.push(readings[k]);
+          }
+        }
+        // sort by timestamp
+        list.sort((a,b)=>a.timestamp-b.timestamp);
+        // limit to last 50
+        const last = list.slice(-50);
+        chart.data.labels = last.map(r=> new Date(r.timestamp).toLocaleTimeString());
+        chart.data.datasets[0].data = last.map(r=> (r.current_mps*3.6).toFixed(2));
+        chart.update();
+
+        statusEl.textContent = 'Live';
+      } catch(err) {
+        statusEl.textContent = 'Error: ' + err.message;
+      }
+    }
+
+    // poll every 5 seconds
+    updateOnce();
+    setInterval(updateOnce, 5000);
+  </script>
+</body>
+</html>
+
+--- style.css ---
+body{font-family:Inter, system-ui, Arial; margin:0; background:#0a1f44; color:#fff}
+header{padding:16px; background:#081730}
+header h1{margin:0;font-size:20px}
+.cards{display:flex;gap:12px;padding:12px}
+.card{background:#12263f;padding:12px;border-radius:8px;flex:1}
+.card h2{margin:0 0 8px 0}
+main{padding:12px}
+
+--- END ---
