@@ -1,399 +1,268 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anemometer</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <script src="https://unpkg.com/recharts@latest/umd/Recharts.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anemometer Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.min.js"></script>
 
-    <style>
-        :root {
-            --background: 0 0% 100%;
-            --foreground: 224 71.4% 4.1%;
-            --card: 0 0% 100%;
-            --card-foreground: 224 71.4% 4.1%;
-            --popover: 0 0% 100%;
-            --popover-foreground: 224 71.4% 4.1%;
-            --primary: 220 9.1% 45.1%;
-            --primary-foreground: 210 20% 98%;
-            --secondary: 220 14.3% 95.9%;
-            --secondary-foreground: 220.9 39.3% 11%;
-            --muted: 220 14.3% 95.9%;
-            --muted-foreground: 220 8.9% 46.1%;
-            --accent: 220 14.3% 95.9%;
-            --accent-foreground: 220.9 39.3% 11%;
-            --destructive: 0 84.2% 60.2%;
-            --destructive-foreground: 210 20% 98%;
-            --border: 220 13% 91%;
-            --input: 220 13% 91%;
-            --ring: 224 71.4% 4.1%;
-            --chart-1: 220 70% 50%;
-            --chart-2: 25 80% 50%;
-            --chart-3: 160 70% 40%;
-            --chart-4: 300 100% 50%;
-            --chart-5: 50 100% 50%;
-            --radius: 0.5rem;
-        }
-
-        .dark {
-            --background: 224 71.4% 4.1%;
-            --foreground: 210 20% 98%;
-            --card: 224 71.4% 4.1%;
-            --card-foreground: 210 20% 98%;
-            --popover: 224 71.4% 4.1%;
-            --popover-foreground: 210 20% 98%;
-            --primary: 210 20% 98%;
-            --primary-foreground: 220.9 39.3% 11%;
-            --secondary: 215 27.9% 16.9%;
-            --secondary-foreground: 210 20% 98%;
-            --muted: 215 27.9% 16.9%;
-            --muted-foreground: 217.9 10.6% 64.9%;
-            --accent: 215 27.9% 16.9%;
-            --accent-foreground: 210 20% 98%;
-            --destructive: 0 62.8% 30.6%;
-            --destructive-foreground: 210 20% 98%;
-            --border: 215 27.9% 16.9%;
-            --input: 215 27.9% 16.9%;
-            --ring: 216 12.2% 83.9%;
-            --chart-1: 220 70% 50%;
-            --chart-2: 25 80% 50%;
-            --chart-3: 160 70% 40%;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: hsl(var(--background));
-            color: hsl(var(--foreground));
-        }
-        .card {
-            background-color: hsl(var(--card));
-            color: hsl(var(--card-foreground));
-            border-radius: var(--radius);
-            border: 1px solid hsl(var(--border));
-            box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06);
-        }
-        .card-header { padding: 1.5rem; }
-        .card-title { font-size: 1.125rem; font-weight: 600; line-height: 1; letter-spacing: -0.025em; }
-        .card-content { padding: 1.5rem; padding-top: 0; }
-        .text-muted-foreground { color: hsl(var(--muted-foreground)); }
-        .border-dashed { border-style: dashed; }
-        .bg-card { background-color: hsl(var(--card)); }
-        .border-b { border-bottom-width: 1px; }
-        .h-16 { height: 4rem; }
-        .p-4 { padding: 1rem; }
-        .sm\:p-6 { padding: 1.5rem; }
-        .md\:p-8 { padding: 2rem; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .fade-in-animate { animation: fadeIn 0.5s ease-out forwards; }
-    </style>
+  <style>
+    :root {
+      --background: 224 71.4% 4.1%;
+      --foreground: 210 20% 98%;
+      --card: 224 71.4% 4.1%;
+      --card-foreground: 210 20% 98%;
+      --popover: 224 71.4% 4.1%;
+      --popover-foreground: 210 20% 98%;
+      --primary: 210 20% 98%;
+      --primary-foreground: 220.9 39.3% 11%;
+      --secondary: 215 27.9% 16.9%;
+      --secondary-foreground: 210 20% 98%;
+      --muted: 215 27.9% 16.9%;
+      --muted-foreground: 217.9 10.6% 64.9%;
+      --accent: 215 27.9% 16.9%;
+      --accent-foreground: 210 20% 98%;
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 210 20% 98%;
+      --border: 215 27.9% 16.9%;
+      --input: 215 27.9% 16.9%;
+      --ring: 216 12.2% 83.9%;
+      --radius: 0.5rem;
+      --chart-1: 220 70% 50%;
+    }
+    body {
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
+      font-family: sans-serif;
+    }
+    .card {
+      background-color: hsl(var(--card));
+      color: hsl(var(--card-foreground));
+      border-radius: var(--radius);
+      border: 1px solid hsl(var(--border));
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    }
+    .card-header { padding: 1.5rem; }
+    .card-content { padding: 1.5rem; padding-top: 0; }
+    .card-title { font-size: 1rem; font-weight: 500; color: hsl(var(--muted-foreground)); }
+    .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+    .font-bold { font-weight: 700; }
+    .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+    .text-muted-foreground { color: hsl(var(--muted-foreground)); }
+    .text-xs { font-size: 0.75rem; line-height: 1rem; }
+    .recharts-cartesian-axis-tick-value { fill: #9ca3af; }
+    .recharts-legend-item-text { fill: #f9fafb !important; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in-animate { animation: fadeIn 0.5s ease-out forwards; }
+  </style>
 </head>
 <body class="bg-background text-foreground">
-    <div id="root">
-        <div class="flex min-h-screen w-full flex-col bg-background">
-            <header class="flex h-16 items-center justify-between gap-4 border-b border-border bg-card px-6 sticky top-0 z-50">
-                <div class="flex items-center gap-3">
-                    <h1 class="text-xl font-semibold tracking-tight text-card-foreground">Anemometer</h1>
-                </div>
-                <button id="theme-toggle" class="p-2 rounded-md hover:bg-accent">
-                    <i data-lucide="sun" class="h-6 w-6 block dark:hidden"></i>
-                    <i data-lucide="moon" class="h-6 w-6 hidden dark:block"></i>
-                </button>
-            </header>
-            <main class="flex-1 p-4 sm:p-6 md:p-8">
-                <div id="connection-error" class="hidden items-center justify-center h-[calc(100vh-12rem)] p-4">
-                     <div class="max-w-xl mx-auto border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground">
-                        <i data-lucide="alert-triangle" class="h-4 w-4"></i>
-                        <h5 class="mb-1 font-medium leading-none tracking-tight">Connection Error</h5>
-                        <div class="text-sm [&_p]:leading-relaxed" id="error-message"></div>
-                    </div>
-                </div>
+  <div id="loading-overlay" class="fixed inset-0 bg-background z-50 flex items-center justify-center">
+      <div class="text-center">
+          <p id="error-message" class="text-destructive font-semibold" style="display: none;"></p>
+      </div>
+  </div>
 
-                <div id="dashboard-content" class="grid grid-cols-1 gap-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div class="fade-in-animate" style="animation-delay: 100ms;">
-                            <div class="card border-dashed h-full transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1">
-                                <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <h3 class="card-title text-sm font-medium text-muted-foreground">Current Speed</h3>
-                                    <i data-lucide="zap" class="h-4 w-4 text-muted-foreground"></i>
-                                </div>
-                                <div class="card-content">
-                                    <div id="current-speed" class="text-2xl font-bold tracking-tighter">0.00 <span class="text-sm font-medium text-muted-foreground">km/h</span></div>
-                                    <p class="text-xs text-muted-foreground">Latest reading from sensor</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="fade-in-animate" style="animation-delay: 200ms;">
-                             <div class="card border-dashed h-full transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1">
-                                <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <h3 class="card-title text-sm font-medium text-muted-foreground">Average speed</h3>
-                                    <i data-lucide="bar-chart" class="h-4 w-4 text-muted-foreground"></i>
-                                </div>
-                                <div class="card-content">
-                                    <div id="average-speed" class="text-2xl font-bold tracking-tighter">0.00 <span class="text-sm font-medium text-muted-foreground">km/h</span></div>
-                                    <p class="text-xs text-muted-foreground">Average of last 30 readings</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="fade-in-animate" style="animation-delay: 300ms;">
-                            <div class="card border-dashed h-full transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1">
-                                <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <h3 class="card-title text-sm font-medium text-muted-foreground">Minimum Speed</h3>
-                                    <i data-lucide="zap" class="h-4 w-4 text-muted-foreground"></i>
-                                </div>
-                                <div class="card-content">
-                                    <div id="min-speed" class="text-2xl font-bold tracking-tighter">0.00 <span class="text-sm font-medium text-muted-foreground">km/h</span></div>
-                                    <p class="text-xs text-muted-foreground">Lowest reading</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="fade-in-animate" style="animation-delay: 400ms;">
-                            <div class="card border-dashed h-full transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1">
-                                <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <h3 class="card-title text-sm font-medium text-muted-foreground">Maximum Speed</h3>
-                                    <i data-lucide="activity" class="h-4 w-4 text-muted-foreground"></i>
-                                </div>
-                                <div class="card-content">
-                                    <div id="max-speed" class="text-2xl font-bold tracking-tighter">0.00 <span class="text-sm font-medium text-muted-foreground">km/h</span></div>
-                                    <p class="text-xs text-muted-foreground">Highest reading</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div class="lg:col-span-2 fade-in-animate" style="animation-delay: 500ms;">
-                            <div class="card h-full flex flex-col border-dashed">
-                                <div class="card-header">
-                                    <h3 class="card-title text-lg font-semibold">Real-time Wind Speed (Last 30 readings)</h3>
-                                </div>
-                                <div class="card-content flex-1 -mt-4">
-                                    <div id="chart-container" class="h-full w-full min-h-[350px]"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="lg:col-span-1 fade-in-animate" style="animation-delay: 600ms;">
-                           <!-- Project Credits Card -->
-                            <div class="card border-none shadow-none bg-transparent flex flex-col h-full">
-                                <div class="card-header pb-4">
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <i data-lucide="users" class="h-6 w-6 text-primary" style="color: hsl(var(--primary));"></i>
-                                        <h3 class="card-title text-lg">A Project by BS Physics Students</h3>
-                                    </div>
-                                    <p class="text-sm text-muted-foreground">Batch 2024-2028</p>
-                                </div>
-                                <div class="card-content flex-1 flex flex-col justify-between">
-                                    <div class="flex flex-col gap-3">
-                                         <div class="flex items-start gap-3">
-                                            <div class="p-2 rounded-full" style="background-color: hsla(var(--primary), 0.1);">
-                                               <i data-lucide="briefcase" class="h-4 w-4 text-primary" style="color: hsl(var(--primary));"></i>
-                                            </div>
-                                            <div>
-                                                <p class="text-sm font-semibold">Masoom Ali</p>
-                                                <p class="text-xs text-muted-foreground">Mechanical Work</p>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-start gap-3">
-                                            <div class="p-2 rounded-full" style="background-color: hsla(var(--primary), 0.1);">
-                                                <i data-lucide="code" class="h-4 w-4 text-primary" style="color: hsl(var(--primary));"></i>
-                                            </div>
-                                            <div>
-                                                <p class="text-sm font-semibold">Muhammad Sultan Ul Arifeen</p>
-                                                <p class="text-xs text-muted-foreground">Programming & Electronics</p>
-                                            </div>
-                                        </div>
-                                         <div class="flex items-start gap-3">
-                                            <div class="p-2 rounded-full" style="background-color: hsla(var(--primary), 0.1);">
-                                                <i data-lucide="shield" class="h-4 w-4 text-primary" style="color: hsl(var(--primary));"></i>
-                                            </div>
-                                            <div>
-                                                <p class="text-sm font-semibold">Website Designed & Developed By</p>
-                                                <p class="text-xs text-muted-foreground">Muhammad Sultan Ul Arifeen</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4">
-                                        <hr class="my-3 border-border"/>
-                                        <div class="flex items-center gap-3 mb-2">
-                                            <i data-lucide="award" class="h-5 w-5 text-amber-500"></i>
-                                            <p class="text-sm font-semibold">Special Thanks</p>
-                                        </div>
-                                        <div class="text-xs text-muted-foreground space-y-1">
-                                            <p>Principal Azhar Kaisar</p>
-                                            <p>Professor Muhammad Farooq Ibadat</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
+  <div id="dashboard-content" class="min-h-screen w-full flex-col bg-background" style="visibility: hidden;">
+    <header class="flex h-16 items-center justify-between gap-4 border-b border-border bg-card px-6 sticky top-0 z-40">
+      <div class="flex items-center gap-3">
+        <h1 class="text-xl font-semibold tracking-tight text-card-foreground">Anemometer</h1>
+      </div>
+    </header>
+    <main class="flex-1 p-4 sm:p-6 md:p-8">
+      <div class="grid grid-cols-1 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="fade-in-animate" style="animation-delay: 100ms;">
+            <div id="current-speed-card" class="card border-dashed transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1">
+              <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 class="card-title">Current Speed</h3>
+                <i data-lucide="zap" class="h-4 w-4 text-muted-foreground"></i>
+              </div>
+              <div class="card-content">
+                <div id="current-speed" class="text-2xl font-bold">0.00</div>
+                <p class="text-xs text-muted-foreground">Latest reading from sensor</p>
+              </div>
+            </div>
+          </div>
+          <div class="fade-in-animate" style="animation-delay: 200ms;">
+             <div class="card border-dashed transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1">
+              <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 class="card-title">Average speed</h3>
+                <i data-lucide="bar-chart" class="h-4 w-4 text-muted-foreground"></i>
+              </div>
+              <div class="card-content">
+                <div id="average-speed" class="text-2xl font-bold">0.00</div>
+                <p class="text-xs text-muted-foreground">Average of last 30 readings</p>
+              </div>
+            </div>
+          </div>
+          <div class="fade-in-animate" style="animation-delay: 300ms;">
+             <div class="card border-dashed transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1">
+              <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 class="card-title">Minimum Speed</h3>
+                <i data-lucide="activity" class="h-4 w-4 text-muted-foreground"></i>
+              </div>
+              <div class="card-content">
+                <div id="min-speed" class="text-2xl font-bold">0.00</div>
+                <p class="text-xs text-muted-foreground">Lowest reading</p>
+              </div>
+            </div>
+          </div>
+          <div class="fade-in-animate" style="animation-delay: 400ms;">
+            <div class="card border-dashed transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1">
+              <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 class="card-title">Maximum Speed</h3>
+                <i data-lucide="activity" class="h-4 w-4 text-muted-foreground"></i>
+              </div>
+              <div class="card-content">
+                <div id="max-speed" class="text-2xl font-bold">0.00</div>
+                <p class="text-xs text-muted-foreground">Highest reading</p>
+              </div>
+            </div>
+          </div>
         </div>
-    </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-3 fade-in-animate" style="animation-delay: 500ms;">
+            <div class="card h-full flex flex-col border-dashed">
+              <div class="card-header">
+                <h3 class="text-lg font-semibold text-card-foreground">Real-time Wind Speed (Last 30 readings)</h3>
+              </div>
+              <div class="card-content flex-1 -mt-4">
+                <div id="chart-container" class="h-full w-full min-h-[350px]"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
 
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  <script type="module">
+    // --- START: Firebase Configuration ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-        document.addEventListener('DOMContentLoaded', (event) => {
-            // --- START: Firebase Configuration ---
-            const firebaseConfig = {
-              "projectId": "anemometer-fgsd",
-              "appId": "1:474068960064:web:b4dc79e5112a18743b30a5",
-              "apiKey": "AIzaSyAssOVvWLkzKMcL-kgyrlYNg05HEQUGBAo",
-              "authDomain": "anemometer-fgsd.firebaseapp.com",
-              "measurementId": "",
-              "messagingSenderId": "474068960064",
-              "databaseURL": "https://anemometer-fgsd-default-rtdb.firebaseio.com"
-            };
-            // --- END: Firebase Configuration ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyAssOVvWLkzKMcL-kgyrlYNg05HEQUGBAo",
+      authDomain: "anemometer-fgsd.firebaseapp.com",
+      databaseURL: "https://anemometer-fgsd-default-rtdb.firebaseio.com",
+      projectId: "anemometer-fgsd",
+      storageBucket: "anemometer-fgsd.appspot.com",
+      messagingSenderId: "474068960064",
+      appId: "1:474068960064:web:b4dc79e5112a18743b30a5"
+    };
+    // --- END: Firebase Configuration ---
 
-            // --- Check for placeholder keys ---
-            if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("YOUR_") || firebaseConfig.apiKey.includes("REPLACE_")) {
-                 document.getElementById('dashboard-content').classList.add('hidden');
-                 const errorDiv = document.getElementById('connection-error');
-                 errorDiv.classList.remove('hidden');
-                 errorDiv.classList.add('flex');
-                 document.getElementById('error-message').innerText = "Firebase is not configured. Make sure you have replaced the placeholder API keys in the HTML file.";
-                 lucide.createIcons();
-                 return;
-            }
+    // --- MAIN APP SCRIPT ---
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
 
+      const { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } = Recharts;
 
-            // --- Initialize Firebase ---
-            let app;
-            try {
-                app = initializeApp(firebaseConfig);
-            } catch (e) {
-                console.error("Firebase initialization failed:", e);
-                document.getElementById('dashboard-content').classList.add('hidden');
-                const errorDiv = document.getElementById('connection-error');
-                errorDiv.classList.remove('hidden');
-                errorDiv.classList.add('flex');
-                document.getElementById('error-message').innerText = "Failed to initialize Firebase. Please check your configuration in the HTML file.";
-                lucide.createIcons();
-                return;
-            }
+      let app;
+      try {
+        app = initializeApp(firebaseConfig);
+      } catch (e) {
+        document.getElementById('error-message').textContent = 'Firebase initialization failed. Please check the API keys in the HTML file.';
+        document.getElementById('error-message').style.display = 'block';
+        return;
+      }
 
+      const db = getDatabase(app);
+      const readingsRef = ref(db, 'anemometer/readings');
+      const readingsQuery = query(readingsRef, limitToLast(30));
 
-            // --- Theme Toggle ---
-            const themeToggle = document.getElementById('theme-toggle');
-            const html = document.documentElement;
-            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                html.classList.add('dark');
-            } else {
-                html.classList.remove('dark');
-            }
-            themeToggle.addEventListener('click', () => {
-                html.classList.toggle('dark');
-                if (html.classList.contains('dark')) {
-                    localStorage.setItem('theme', 'dark');
-                } else {
-                    localStorage.setItem('theme', 'light');
-                }
-                // Re-render chart on theme change
-                renderChart(speedHistory);
-            });
+      const currentSpeedEl = document.getElementById('current-speed');
+      const averageSpeedEl = document.getElementById('average-speed');
+      const minSpeedEl = document.getElementById('min-speed');
+      const maxSpeedEl = document.getElementById('max-speed');
+      const chartContainer = document.getElementById('chart-container');
+      const kmhSpan = ' <span class="text-sm font-medium text-muted-foreground">km/h</span>';
 
+      const renderChart = (data) => {
+        const yDomain = [0, Math.max(10, Math.max(...data.map(d => d.speed)) + 5)];
+        const chartElement = React.createElement(ResponsiveContainer, { width: '100%', height: 350 },
+          React.createElement(AreaChart, { data: data, margin: { top: 5, right: 20, left: -10, bottom: 20 } },
+            React.createElement('defs', null,
+              React.createElement('linearGradient', { id: 'glow', x1: '0', y1: '0', x2: '0', y2: '1' },
+                React.createElement('stop', { offset: '5%', stopColor: 'hsl(var(--chart-1))', stopOpacity: 0.4 }),
+                React.createElement('stop', { offset: '95%', stopColor: 'hsl(var(--chart-1))', stopOpacity: 0 })
+              )
+            ),
+            React.createElement(XAxis, { dataKey: 'time', stroke: 'hsl(var(--foreground))', fontSize: 12, tickLine: false, axisLine: { stroke: 'hsl(var(--foreground))', opacity: 0.2 }, tickMargin: 10, opacity: 1 }),
+            React.createElement(YAxis, { stroke: 'hsl(var(--foreground))', fontSize: 12, tickLine: false, axisLine: { stroke: 'hsl(var(--foreground))', opacity: 0.2 }, tickMargin: 10, domain: yDomain, opacity: 1 }),
+            React.createElement(Tooltip, {
+                contentStyle: { 
+                    backgroundColor: 'hsl(var(--background) / 0.8)', 
+                    borderColor: 'hsl(var(--border))',
+                    backdropFilter: 'blur(4px)'
+                },
+                cursor: { stroke: "hsl(var(--chart-1))", strokeWidth: 1, strokeDasharray: "3 3" },
+                formatter: (value) => [`${Number(value).toFixed(2)} km/h`, 'Speed']
+            }),
+            React.createElement(Area, { type: 'monotone', dataKey: 'speed', stroke: 'hsl(var(--chart-1))', strokeWidth: 2, fillOpacity: 1, fill: 'url(#glow)', dot: false, activeDot: { r: 6 } })
+          )
+        );
+        ReactDOM.render(chartElement, chartContainer);
+      };
 
-            // --- Chart and Data Logic ---
-            const { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } = Recharts;
-            let speedHistory = [];
+      onValue(readingsQuery, (snapshot) => {
+        document.getElementById('loading-overlay').style.display = 'none';
+        document.getElementById('dashboard-content').style.visibility = 'visible';
 
-            const renderChart = (data) => {
-                const isDark = document.documentElement.classList.contains('dark');
-                const axisColor = isDark ? '#FFFFFF' : '#666666';
+        const data = snapshot.val();
+        if (data) {
+          const history = Object.values(data)
+            .map(d => ({
+              speed: typeof d.speed === 'number' ? d.speed : 0,
+              timestamp: typeof d.timestamp === 'number' ? d.timestamp : 0,
+              time: new Date(d.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }))
+            .filter(d => d.timestamp > 0)
+            .sort((a, b) => a.timestamp - b.timestamp);
 
-                const Chart = React.createElement(ResponsiveContainer, { width: '100%', height: 350 },
-                    React.createElement(AreaChart, { data: data, margin: { top: 5, right: 20, left: -10, bottom: 20 } },
-                        React.createElement('defs', null,
-                            React.createElement('linearGradient', { id: 'colorSpeed', x1: '0', y1: '0', x2: '0', y2: '1' },
-                                React.createElement('stop', { offset: '5%', stopColor: 'hsl(var(--chart-1))', stopOpacity: 0.8 }),
-                                React.createElement('stop', { offset: '95%', stopColor: 'hsl(var(--chart-1))', stopOpacity: 0 })
-                            )
-                        ),
-                        React.createElement(XAxis, { dataKey: 'time', stroke: axisColor, fontSize: 12, tickLine: false, axisLine: { stroke: axisColor, opacity: 0.2 }, tickMargin: 10 }),
-                        React.createElement(YAxis, { stroke: axisColor, fontSize: 12, tickLine: false, axisLine: { stroke: axisColor, opacity: 0.2 }, tickMargin: 10, domain: [0, 'dataMax + 10'] }),
-                        React.createElement(Tooltip, {
-                            contentStyle: {
-                                backgroundColor: 'hsl(var(--background) / 0.8)',
-                                borderColor: 'hsl(var(--border))'
-                            },
-                             formatter: (value) => [`${Number(value).toFixed(2)} km/h`, 'Speed']
-                        }),
-                        React.createElement(Area, { type: 'monotone', dataKey: 'speed', stroke: 'hsl(var(--chart-1))', fillOpacity: 1, fill: 'url(#colorSpeed)' })
-                    )
-                );
-                ReactDOM.render(Chart, document.getElementById('chart-container'));
-            };
+          if (history.length > 0) {
+            const speeds = history.map(s => s.speed);
+            const currentSpeed = speeds[speeds.length - 1];
+            const avgSpeed = speeds.reduce((acc, curr) => acc + curr, 0) / speeds.length;
+            const minSpeed = Math.min(...speeds);
+            const maxSpeed = Math.max(...speeds);
 
-            const updateDashboard = (newSpeed) => {
-                const now = new Date();
-                const newTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            currentSpeedEl.innerHTML = currentSpeed.toFixed(2) + kmhSpan;
+            averageSpeedEl.innerHTML = avgSpeed.toFixed(2) + kmhSpan;
+            minSpeedEl.innerHTML = minSpeed.toFixed(2) + kmhSpan;
+            maxSpeedEl.innerHTML = maxSpeed.toFixed(2) + kmhSpan;
 
-                speedHistory.push({ time: newTime, speed: newSpeed, timestamp: now.getTime() });
-                if (speedHistory.length > 30) {
-                    speedHistory.shift();
-                }
-
-                const speeds = speedHistory.map(s => s.speed);
-                const currentSpeed = speeds.length > 0 ? speeds[speeds.length - 1] : 0;
-                const averageSpeed = speeds.length > 0 ? speeds.reduce((a, b) => a + b, 0) / speeds.length : 0;
-                const minSpeed = speeds.length > 0 ? Math.min(...speeds) : 0;
-                const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 0;
-
-                document.getElementById('current-speed').innerHTML = `${currentSpeed.toFixed(2)} <span class="text-sm font-medium text-muted-foreground">km/h</span>`;
-                document.getElementById('average-speed').innerHTML = `${averageSpeed.toFixed(2)} <span class="text-sm font-medium text-muted-foreground">km/h</span>`;
-                document.getElementById('min-speed').innerHTML = `${minSpeed.toFixed(2)} <span class="text-sm font-medium text-muted-foreground">km/h</span>`;
-                document.getElementById('max-speed').innerHTML = `${maxSpeed.toFixed(2)} <span class="text-sm font-medium text-muted-foreground">km/h</span>`;
-
-                renderChart(speedHistory);
-            };
-
-            // Initialize with empty data
-            updateDashboard(0);
-            for(let i = 0; i < 29; i++) {
-                speedHistory.unshift({ time: '..', speed: 0, timestamp: 0 });
-            }
-            renderChart(speedHistory);
-
-
-            // --- Firebase Data Listener ---
-            const db = getDatabase(app);
-            const dataRef = ref(db, 'anemometer/latest');
-
-            onValue(dataRef, (snapshot) => {
-                const data = snapshot.val();
-                if (data && typeof data.windSpeed !== 'undefined') {
-                    updateDashboard(data.windSpeed);
-                }
-            }, (error) => {
-                console.error("Firebase read failed:", error);
-                 document.getElementById('dashboard-content').classList.add('hidden');
-                 const errorDiv = document.getElementById('connection-error');
-                 errorDiv.classList.remove('hidden');
-                 errorDiv.classList.add('flex');
-                 document.getElementById('error-message').innerText = "Failed to connect to the data stream. Please check your Firebase setup and security rules.";
-                 lucide.createIcons();
-            });
-
-            // --- Initialize Icons ---
-            lucide.createIcons();
-        });
-    </script>
-    <!-- React and ReactDOM for Recharts -->
-    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-
+            renderChart(history);
+          }
+        } else {
+          // Handle case where there is no data
+          const emptyHistory = Array.from({ length: 30 }, (_, i) => ({
+            speed: 0,
+            timestamp: Date.now() - (30 - i) * 1000,
+            time: new Date(Date.now() - (30 - i) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          }));
+          currentSpeedEl.innerHTML = '0.00' + kmhSpan;
+          averageSpeedEl.innerHTML = '0.00' + kmhSpan;
+          minSpeedEl.innerHTML = '0.00' + kmhSpan;
+          maxSpeedEl.innerHTML = '0.00' + kmhSpan;
+          renderChart(emptyHistory);
+        }
+      }, (error) => {
+          console.error("Firebase read failed:", error);
+          document.getElementById('error-message').textContent = 'Failed to connect to the data stream. Check Firebase rules and configuration.';
+          document.getElementById('error-message').style.display = 'block';
+          document.getElementById('loading-overlay').style.display = 'flex';
+          document.getElementById('dashboard-content').style.visibility = 'hidden';
+      });
+    });
+  </script>
 </body>
 </html>
+
+    
