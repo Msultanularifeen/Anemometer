@@ -1,268 +1,236 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Anemometer Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.min.js"></script>
-
-  <style>
-    :root {
-      --background: 224 71.4% 4.1%;
-      --foreground: 210 20% 98%;
-      --card: 224 71.4% 4.1%;
-      --card-foreground: 210 20% 98%;
-      --popover: 224 71.4% 4.1%;
-      --popover-foreground: 210 20% 98%;
-      --primary: 210 20% 98%;
-      --primary-foreground: 220.9 39.3% 11%;
-      --secondary: 215 27.9% 16.9%;
-      --secondary-foreground: 210 20% 98%;
-      --muted: 215 27.9% 16.9%;
-      --muted-foreground: 217.9 10.6% 64.9%;
-      --accent: 215 27.9% 16.9%;
-      --accent-foreground: 210 20% 98%;
-      --destructive: 0 62.8% 30.6%;
-      --destructive-foreground: 210 20% 98%;
-      --border: 215 27.9% 16.9%;
-      --input: 215 27.9% 16.9%;
-      --ring: 216 12.2% 83.9%;
-      --radius: 0.5rem;
-      --chart-1: 220 70% 50%;
-    }
-    body {
-      background-color: hsl(var(--background));
-      color: hsl(var(--foreground));
-      font-family: sans-serif;
-    }
-    .card {
-      background-color: hsl(var(--card));
-      color: hsl(var(--card-foreground));
-      border-radius: var(--radius);
-      border: 1px solid hsl(var(--border));
-      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    }
-    .card-header { padding: 1.5rem; }
-    .card-content { padding: 1.5rem; padding-top: 0; }
-    .card-title { font-size: 1rem; font-weight: 500; color: hsl(var(--muted-foreground)); }
-    .text-2xl { font-size: 1.5rem; line-height: 2rem; }
-    .font-bold { font-weight: 700; }
-    .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
-    .text-muted-foreground { color: hsl(var(--muted-foreground)); }
-    .text-xs { font-size: 0.75rem; line-height: 1rem; }
-    .recharts-cartesian-axis-tick-value { fill: #9ca3af; }
-    .recharts-legend-item-text { fill: #f9fafb !important; }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .fade-in-animate { animation: fadeIn 0.5s ease-out forwards; }
-  </style>
-</head>
-<body class="bg-background text-foreground">
-  <div id="loading-overlay" class="fixed inset-0 bg-background z-50 flex items-center justify-center">
-      <div class="text-center">
-          <p id="error-message" class="text-destructive font-semibold" style="display: none;"></p>
-      </div>
-  </div>
-
-  <div id="dashboard-content" class="min-h-screen w-full flex-col bg-background" style="visibility: hidden;">
-    <header class="flex h-16 items-center justify-between gap-4 border-b border-border bg-card px-6 sticky top-0 z-40">
-      <div class="flex items-center gap-3">
-        <h1 class="text-xl font-semibold tracking-tight text-card-foreground">Anemometer</h1>
-      </div>
-    </header>
-    <main class="flex-1 p-4 sm:p-6 md:p-8">
-      <div class="grid grid-cols-1 gap-6">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div class="fade-in-animate" style="animation-delay: 100ms;">
-            <div id="current-speed-card" class="card border-dashed transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1">
-              <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 class="card-title">Current Speed</h3>
-                <i data-lucide="zap" class="h-4 w-4 text-muted-foreground"></i>
-              </div>
-              <div class="card-content">
-                <div id="current-speed" class="text-2xl font-bold">0.00</div>
-                <p class="text-xs text-muted-foreground">Latest reading from sensor</p>
-              </div>
-            </div>
-          </div>
-          <div class="fade-in-animate" style="animation-delay: 200ms;">
-             <div class="card border-dashed transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1">
-              <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 class="card-title">Average speed</h3>
-                <i data-lucide="bar-chart" class="h-4 w-4 text-muted-foreground"></i>
-              </div>
-              <div class="card-content">
-                <div id="average-speed" class="text-2xl font-bold">0.00</div>
-                <p class="text-xs text-muted-foreground">Average of last 30 readings</p>
-              </div>
-            </div>
-          </div>
-          <div class="fade-in-animate" style="animation-delay: 300ms;">
-             <div class="card border-dashed transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1">
-              <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 class="card-title">Minimum Speed</h3>
-                <i data-lucide="activity" class="h-4 w-4 text-muted-foreground"></i>
-              </div>
-              <div class="card-content">
-                <div id="min-speed" class="text-2xl font-bold">0.00</div>
-                <p class="text-xs text-muted-foreground">Lowest reading</p>
-              </div>
-            </div>
-          </div>
-          <div class="fade-in-animate" style="animation-delay: 400ms;">
-            <div class="card border-dashed transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1">
-              <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 class="card-title">Maximum Speed</h3>
-                <i data-lucide="activity" class="h-4 w-4 text-muted-foreground"></i>
-              </div>
-              <div class="card-content">
-                <div id="max-speed" class="text-2xl font-bold">0.00</div>
-                <p class="text-xs text-muted-foreground">Highest reading</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-3 fade-in-animate" style="animation-delay: 500ms;">
-            <div class="card h-full flex flex-col border-dashed">
-              <div class="card-header">
-                <h3 class="text-lg font-semibold text-card-foreground">Real-time Wind Speed (Last 30 readings)</h3>
-              </div>
-              <div class="card-content flex-1 -mt-4">
-                <div id="chart-container" class="h-full w-full min-h-[350px]"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <script type="module">
-    // --- START: Firebase Configuration ---
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyAssOVvWLkzKMcL-kgyrlYNg05HEQUGBAo",
-      authDomain: "anemometer-fgsd.firebaseapp.com",
-      databaseURL: "https://anemometer-fgsd-default-rtdb.firebaseio.com",
-      projectId: "anemometer-fgsd",
-      storageBucket: "anemometer-fgsd.appspot.com",
-      messagingSenderId: "474068960064",
-      appId: "1:474068960064:web:b4dc79e5112a18743b30a5"
-    };
-    // --- END: Firebase Configuration ---
-
-    // --- MAIN APP SCRIPT ---
-    document.addEventListener('DOMContentLoaded', () => {
-      lucide.createIcons();
-
-      const { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } = Recharts;
-
-      let app;
-      try {
-        app = initializeApp(firebaseConfig);
-      } catch (e) {
-        document.getElementById('error-message').textContent = 'Firebase initialization failed. Please check the API keys in the HTML file.';
-        document.getElementById('error-message').style.display = 'block';
-        return;
-      }
-
-      const db = getDatabase(app);
-      const readingsRef = ref(db, 'anemometer/readings');
-      const readingsQuery = query(readingsRef, limitToLast(30));
-
-      const currentSpeedEl = document.getElementById('current-speed');
-      const averageSpeedEl = document.getElementById('average-speed');
-      const minSpeedEl = document.getElementById('min-speed');
-      const maxSpeedEl = document.getElementById('max-speed');
-      const chartContainer = document.getElementById('chart-container');
-      const kmhSpan = ' <span class="text-sm font-medium text-muted-foreground">km/h</span>';
-
-      const renderChart = (data) => {
-        const yDomain = [0, Math.max(10, Math.max(...data.map(d => d.speed)) + 5)];
-        const chartElement = React.createElement(ResponsiveContainer, { width: '100%', height: 350 },
-          React.createElement(AreaChart, { data: data, margin: { top: 5, right: 20, left: -10, bottom: 20 } },
-            React.createElement('defs', null,
-              React.createElement('linearGradient', { id: 'glow', x1: '0', y1: '0', x2: '0', y2: '1' },
-                React.createElement('stop', { offset: '5%', stopColor: 'hsl(var(--chart-1))', stopOpacity: 0.4 }),
-                React.createElement('stop', { offset: '95%', stopColor: 'hsl(var(--chart-1))', stopOpacity: 0 })
-              )
-            ),
-            React.createElement(XAxis, { dataKey: 'time', stroke: 'hsl(var(--foreground))', fontSize: 12, tickLine: false, axisLine: { stroke: 'hsl(var(--foreground))', opacity: 0.2 }, tickMargin: 10, opacity: 1 }),
-            React.createElement(YAxis, { stroke: 'hsl(var(--foreground))', fontSize: 12, tickLine: false, axisLine: { stroke: 'hsl(var(--foreground))', opacity: 0.2 }, tickMargin: 10, domain: yDomain, opacity: 1 }),
-            React.createElement(Tooltip, {
-                contentStyle: { 
-                    backgroundColor: 'hsl(var(--background) / 0.8)', 
-                    borderColor: 'hsl(var(--border))',
-                    backdropFilter: 'blur(4px)'
-                },
-                cursor: { stroke: "hsl(var(--chart-1))", strokeWidth: 1, strokeDasharray: "3 3" },
-                formatter: (value) => [`${Number(value).toFixed(2)} km/h`, 'Speed']
-            }),
-            React.createElement(Area, { type: 'monotone', dataKey: 'speed', stroke: 'hsl(var(--chart-1))', strokeWidth: 2, fillOpacity: 1, fill: 'url(#glow)', dot: false, activeDot: { r: 6 } })
-          )
-        );
-        ReactDOM.render(chartElement, chartContainer);
-      };
-
-      onValue(readingsQuery, (snapshot) => {
-        document.getElementById('loading-overlay').style.display = 'none';
-        document.getElementById('dashboard-content').style.visibility = 'visible';
-
-        const data = snapshot.val();
-        if (data) {
-          const history = Object.values(data)
-            .map(d => ({
-              speed: typeof d.speed === 'number' ? d.speed : 0,
-              timestamp: typeof d.timestamp === 'number' ? d.timestamp : 0,
-              time: new Date(d.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            }))
-            .filter(d => d.timestamp > 0)
-            .sort((a, b) => a.timestamp - b.timestamp);
-
-          if (history.length > 0) {
-            const speeds = history.map(s => s.speed);
-            const currentSpeed = speeds[speeds.length - 1];
-            const avgSpeed = speeds.reduce((acc, curr) => acc + curr, 0) / speeds.length;
-            const minSpeed = Math.min(...speeds);
-            const maxSpeed = Math.max(...speeds);
-
-            currentSpeedEl.innerHTML = currentSpeed.toFixed(2) + kmhSpan;
-            averageSpeedEl.innerHTML = avgSpeed.toFixed(2) + kmhSpan;
-            minSpeedEl.innerHTML = minSpeed.toFixed(2) + kmhSpan;
-            maxSpeedEl.innerHTML = maxSpeed.toFixed(2) + kmhSpan;
-
-            renderChart(history);
-          }
-        } else {
-          // Handle case where there is no data
-          const emptyHistory = Array.from({ length: 30 }, (_, i) => ({
-            speed: 0,
-            timestamp: Date.now() - (30 - i) * 1000,
-            time: new Date(Date.now() - (30 - i) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          }));
-          currentSpeedEl.innerHTML = '0.00' + kmhSpan;
-          averageSpeedEl.innerHTML = '0.00' + kmhSpan;
-          minSpeedEl.innerHTML = '0.00' + kmhSpan;
-          maxSpeedEl.innerHTML = '0.00' + kmhSpan;
-          renderChart(emptyHistory);
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anemometer Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: 'hsl(224 71.4% 4.1%)',
+                        foreground: 'hsl(210 20% 98%)',
+                        card: 'hsl(224 71.4% 6.1%)',
+                        'card-foreground': 'hsl(210 20% 98%)',
+                        primary: 'hsl(210 20% 98%)',
+                        'primary-foreground': 'hsl(220.9 39.3% 11%)',
+                        muted: 'hsl(215 27.9% 16.9%)',
+                        'muted-foreground': 'hsl(217.9 10.6% 64.9%)',
+                        border: 'hsl(215 27.9% 16.9%)',
+                        chart: {
+                          '1': 'hsl(210 80% 60%)'
+                        }
+                    }
+                }
+            }
         }
-      }, (error) => {
-          console.error("Firebase read failed:", error);
-          document.getElementById('error-message').textContent = 'Failed to connect to the data stream. Check Firebase rules and configuration.';
-          document.getElementById('error-message').style.display = 'block';
-          document.getElementById('loading-overlay').style.display = 'flex';
-          document.getElementById('dashboard-content').style.visibility = 'hidden';
-      });
-    });
-  </script>
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/recharts@latest/umd/Recharts.min.js"></script>
+    <style>
+        @import url('https://rsms.me/inter/inter.css');
+        html { font-family: 'Inter', sans-serif; }
+        body {
+            background-color: hsl(224, 71.4%, 4.1%);
+            color: hsl(210, 20%, 98%);
+        }
+        .recharts-cartesian-axis-tick-value, .recharts-tooltip-label {
+            font-size: 0.75rem;
+            fill: hsl(217.9 10.6% 64.9%);
+        }
+        .recharts-tooltip-wrapper {
+            border: 1px solid hsl(215 27.9% 16.9%) !important;
+            background-color: hsl(224, 71.4%, 4.1%) !important;
+        }
+        .recharts-dot {
+            stroke: hsl(224, 71.4%, 4.1%);
+            stroke-width: 2;
+        }
+        .recharts-active-dot {
+            fill: hsl(210 80% 60%);
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div id="root"></div>
+
+    <script type="module">
+        // --- START: Firebase Configuration ---
+        const firebaseConfig = {
+            "projectId": "anemometer-fgsd",
+            "appId": "1:474068960064:web:b4dc79e5112a18743b30a5",
+            "apiKey": "AIzaSyAssOVvWLkzKMcL-kgyrlYNg05HEQUGBAo",
+            "authDomain": "anemometer-fgsd.firebaseapp.com",
+            databaseURL: "https://anemometer-fgsd-default-rtdb.firebaseio.com",
+        };
+        // --- END: Firebase Configuration ---
+
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } = window.Recharts;
+            const root = document.getElementById('root');
+
+            function App() {
+                const [speedHistory, setSpeedHistory] = React.useState([]);
+                const [error, setError] = React.useState(null);
+
+                React.useEffect(() => {
+                    try {
+                        const app = initializeApp(firebaseConfig);
+                        const db = getDatabase(app);
+                        const readingsRef = ref(db, 'anemometer/readings');
+
+                        const listener = onValue(readingsRef, (snapshot) => {
+                            const data = snapshot.val();
+                            if (data) {
+                                const newHistory = Object.values(data)
+                                    .map(d => ({
+                                        speed: typeof d.speed === 'number' ? d.speed : 0,
+                                        timestamp: typeof d.timestamp === 'number' ? d.timestamp : Date.now(),
+                                    }))
+                                    .sort((a, b) => a.timestamp - b.timestamp)
+                                    .slice(-30);
+                                setSpeedHistory(newHistory);
+                            }
+                        }, (err) => {
+                            console.error("Firebase read failed:", err);
+                            setError("Failed to connect to the data stream.");
+                        });
+
+                        return () => listener();
+                    } catch (e) {
+                        console.error("Firebase initialization failed:", e);
+                        setError("Failed to initialize Firebase. Check your configuration.");
+                    }
+                }, []);
+                
+                const stats = React.useMemo(() => {
+                    if (speedHistory.length === 0) {
+                        return { current: 0, avg: 0, min: 0, max: 0 };
+                    }
+                    const speeds = speedHistory.map(s => s.speed);
+                    const current = speeds[speeds.length - 1];
+                    const avg = speeds.reduce((a, b) => a + b, 0) / speeds.length;
+                    const min = Math.min(...speeds);
+                    const max = Math.max(...speeds);
+                    return { current, avg, min, max };
+                }, [speedHistory]);
+                
+                const chartData = React.useMemo(() => {
+                    return speedHistory.map(d => ({
+                        time: new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        speed: d.speed
+                    }));
+                }, [speedHistory]);
+
+                if (error) {
+                    return React.createElement('div', { className: 'flex items-center justify-center min-h-screen p-4' },
+                        React.createElement('div', { className: 'max-w-xl mx-auto bg-red-900/20 border border-red-500/50 rounded-lg p-6' },
+                            React.createElement('h2', { className: 'text-xl font-bold text-red-300' }, 'Connection Error'),
+                            React.createElement('p', { className: 'text-red-300/80 mt-2' }, error)
+                        )
+                    );
+                }
+
+                return React.createElement('div', { className: 'flex min-h-screen w-full flex-col' },
+                    React.createElement('header', { className: 'flex h-16 items-center justify-between gap-4 border-b border-border px-6 sticky top-0 z-50 bg-background/95 backdrop-blur-sm' },
+                        React.createElement('h1', { className: 'text-xl font-semibold tracking-tight' }, 'Anemometer Dashboard')
+                    ),
+                    React.createElement('main', { className: 'flex-1 p-4 sm:p-6 md:p-8' },
+                        React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6' },
+                            StatCard({ icon: 'Zap', title: 'Current Speed', value: stats.current, unit: 'km/h', subtitle: 'Latest reading' }),
+                            StatCard({ icon: 'BarChart', title: 'Average Speed', value: stats.avg, unit: 'km/h', subtitle: 'Average of last 30' }),
+                            StatCard({ icon: 'ArrowDown', title: 'Minimum Speed', value: stats.min, unit: 'km/h', subtitle: 'Lowest in last 30' }),
+                            StatCard({ icon: 'ArrowUp', title: 'Maximum Speed', value: stats.max, unit: 'km/h', subtitle: 'Highest in last 30' })
+                        ),
+                        React.createElement('div', { className: 'grid grid-cols-1 lg:grid-cols-3 gap-6' },
+                            ChartCard({ data: chartData }),
+                            CreditsCard()
+                        )
+                    )
+                );
+            }
+
+            function StatCard({ icon, title, value, unit, subtitle }) {
+                const Icon = React.createElement('i', { 'data-lucide': icon, className: 'h-4 w-4 text-muted-foreground' });
+                return React.createElement('div', { className: 'bg-card border border-border rounded-lg p-4 flex flex-col justify-between transition-all hover:border-primary/50' },
+                    React.createElement('div', { className: 'flex flex-row items-center justify-between pb-2' },
+                        React.createElement('h3', { className: 'text-sm font-medium text-muted-foreground' }, title),
+                        Icon
+                    ),
+                    React.createElement('div', {},
+                      React.createElement('div', { className: 'text-2xl font-bold tracking-tighter' },
+                          value.toFixed(2),
+                          React.createElement('span', { className: 'text-sm font-medium text-muted-foreground ml-1' }, unit)
+                      ),
+                      React.createElement('p', { className: 'text-xs text-muted-foreground mt-1' }, subtitle)
+                    )
+                );
+            }
+
+            function ChartCard({ data }) {
+                 return React.createElement('div', { className: 'bg-card border border-border rounded-lg p-4 lg:col-span-2' },
+                    React.createElement('h3', { className: 'text-lg font-semibold mb-4 px-2' }, 'Real-time Wind Speed'),
+                     React.createElement('div', { style: { width: '100%', height: 350 } },
+                        React.createElement(ResponsiveContainer, { width: '100%', height: '100%' },
+                            React.createElement(AreaChart, { data: data, margin: { top: 5, right: 20, left: -10, bottom: 0 } },
+                                React.createElement('defs', {},
+                                    React.createElement('linearGradient', { id: 'colorSpeed', x1: '0', y1: '0', x2: '0', y2: '1' },
+                                        React.createElement('stop', { offset: '5%', stopColor: 'hsl(var(--chart-1))', stopOpacity: 0.3 }),
+                                        React.createElement('stop', { offset: '95%', stopColor: 'hsl(var(--chart-1))', stopOpacity: 0 })
+                                    )
+                                ),
+                                React.createElement(XAxis, { dataKey: 'time', stroke: 'hsl(var(--border))', tickLine: false, axisLine: false }),
+                                React.createElement(YAxis, { stroke: 'hsl(var(--border))', tickLine: false, axisLine: false, tickFormatter: (value) => `${value}` }),
+                                React.createElement(Tooltip, {
+                                    contentStyle: {
+                                        backgroundColor: 'hsl(var(--background))',
+                                        borderColor: 'hsl(var(--border))'
+                                    },
+                                    labelStyle: { color: 'hsl(var(--foreground))' }
+                                }),
+                                React.createElement(Area, { type: 'monotone', dataKey: 'speed', stroke: 'hsl(var(--chart-1))', strokeWidth: 2, fillOpacity: 1, fill: 'url(#colorSpeed)' })
+                            )
+                        )
+                    )
+                 );
+            }
+
+            function CreditsCard() {
+                const CreditItem = ({ icon, name, role }) => React.createElement('div', { className: 'flex items-center gap-3' },
+                    React.createElement('div', { className: 'bg-muted p-2 rounded-full' }, React.createElement('i', { 'data-lucide': icon, className: 'h-4 w-4 text-primary' })),
+                    React.createElement('div', {},
+                        React.createElement('p', { className: 'text-sm font-semibold' }, name),
+                        React.createElement('p', { className: 'text-xs text-muted-foreground' }, role),
+                    )
+                );
+                
+                return React.createElement('div', { className: 'bg-card border border-border rounded-lg p-6' },
+                    React.createElement('h3', { className: 'text-lg font-semibold mb-4' }, 'Project Credits'),
+                    React.createElement('div', { className: 'space-y-4' },
+                        React.createElement('p', {className: 'text-sm text-muted-foreground'}, 'A project by BS Physics Students (Batch 2024-2028)'),
+                        CreditItem({ icon: 'HardHat', name: 'Masoom Ali', role: 'Mechanical Work' }),
+                        CreditItem({ icon: 'Code', name: 'Muhammad Sultan Ul Arifeen', role: 'Programming & Electronics' }),
+                        CreditItem({ icon: 'Paintbrush', name: 'Muhammad Sultan Ul Arifeen', role: 'Website Design & Development' })
+                    ),
+                    React.createElement('hr', { className: 'border-border my-4' }),
+                     React.createElement('h4', { className: 'text-md font-semibold mb-2' }, 'Special Thanks'),
+                     React.createElement('p', { className: 'text-xs text-muted-foreground' }, 'Principal Azhar Kaisar'),
+                     React.createElement('p', { className: 'text-xs text-muted-foreground' }, 'Professor Muhammad Farooq Ibadat')
+                );
+            }
+            
+            const reactRoot = ReactDOM.createRoot(root);
+            reactRoot.render(React.createElement(App));
+            lucide.createIcons();
+        });
+    </script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
 </body>
 </html>
-
-    
