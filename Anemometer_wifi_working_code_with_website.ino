@@ -7,11 +7,11 @@
 /////////////////////////
 // CONFIG
 /////////////////////////
-const char* WIFI_SSID = "NayaTel";
-const char* WIFI_PASS = "Tr9b5ey1";
+const char* WIFI_SSID = "name of wifi";
+const char* WIFI_PASS = "password";
 
-#define FIREBASE_HOST "wind-speed-a5223-default-rtdb.firebaseio.com"
-#define FIREBASE_AUTH "zzB9UhxmW3lt6YXzAgPQQvHfT4d3s55UCLRBpFpG"
+#define FIREBASE_HOST "firebase name "
+#define FIREBASE_AUTH "firebase auth"
 
 const float anemometerDiameter = 0.12; // meters
 const int pulsesPerRevolution = 2;
